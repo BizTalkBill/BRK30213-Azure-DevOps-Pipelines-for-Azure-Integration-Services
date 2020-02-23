@@ -1,0 +1,450 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "BaseName": {
+      "defaultValue": "thetour",
+      "type": "string"
+    },
+    "EnvironmentPrefix": {
+      "defaultValue": "DEV",
+      "type": "string",
+      "allowedValues": [
+        "DEV",
+        "TST",
+        "PRD"
+      ]
+    },
+    "EnvironmentName": {
+      "defaultValue": "Development",
+      "type": "string"
+    },
+    "EnvironmentType": {
+      "defaultValue": "Non-Production",
+      "type": "string",
+      "allowedValues": [
+        "Production",
+        "Pre-Production",
+        "Non-Production"
+      ]
+    },
+    "EnvironmentTag": {
+      "defaultValue": "Development",
+      "type": "string"
+    },
+    "ApplicationTag": {
+      "defaultValue": "thetour",
+      "type": "string"
+    },
+    "dbMaxSizeBytes": {
+      "defaultValue": "10737418240",
+      "type": "string"
+    },
+    "sql-skuName": {
+      "defaultValue": "S2",
+      "type": "string",
+      "allowedValues": [
+        "S2",
+        "S3",
+        "S4",
+        "S6"
+      ]
+    },
+    "keyvault-name": {
+      "defaultValue": "thetour-kv01-dev",
+      "type": "string"
+    },
+    "SQLServADLogin": {
+      "defaultValue": "",
+      "type": "string"
+    },
+    "SQLServADSID": {
+      "defaultValue": "",
+      "type": "string"
+    }
+  },
+  "variables": {
+    "sql_server_name": "[concat(toLower(parameters('BaseName')),'-','sql01','-',toLower(parameters('EnvironmentPrefix')))]",
+    "sql_audit_storage_name": "[concat(toLower(parameters('BaseName')),'sqlaudit01',toLower(parameters('EnvironmentPrefix')))]",
+    "sql_database_name": "sqldb01",
+    "sqldatabase_admin_login": "[concat( parameters('BaseName'),'admin', uniqueString(resourceGroup().id),toLower(parameters('EnvironmentPrefix')))]",
+    "sqldatabase_admin_password": "[replace(concat(uniqueString(resourceGroup().id),'1#2',uniqueString(subscription().subscriptionId)),'x','!')]",
+    "sqldatabase_client_login": "[concat( parameters('BaseName'),'client', uniqueString(resourceGroup().id),toLower(parameters('EnvironmentPrefix')))]",
+    "sqldatabase_client_password": "[replace(concat(uniqueString(resourceGroup().id),'5#6',uniqueString(subscription().subscriptionId)),'y','!')]"
+  },
+  "resources": [
+    {
+      "name": "nestedTemplate",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-05-10",
+      "resourceGroup": "[resourceGroup().name]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "variables": {},
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqldatabase-admin-login')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/plain",
+                "value": "[variables('sqldatabase_admin_login')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqldatabase-admin-password')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/secret",
+                "value": "[variables('sqldatabase_admin_password')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqldatabase-client-login')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/plain",
+                "value": "[variables('sqldatabase_client_login')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqldatabase-client-password')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/secret",
+                "value": "[variables('sqldatabase_client_password')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqlserver-name')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/plain",
+                "value": "[variables('sql_server_name')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqlserver-fullname')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/plain",
+                "value": "[concat(variables('sql_server_name'),'.database.windows.net')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sqldatabase-name')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/plain",
+                "value": "[variables('sql_database_name')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sql-admin-connectionstring')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/secret",
+                "value": "[concat('Server=tcp:', variables('sql_server_name'),'.database.windows.net',',1433;Initial Catalog=',variables('sql_database_name'),';User ID=',variables('sqldatabase_admin_login'),';Password=',variables('sqldatabase_admin_password'),';Encrypt=True;TrustServerCertificate=False;Connection Timeout=7200;')]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "name": "[concat(parameters('KeyVault-Name'),'/', 'sql-client-connectionstring')]",
+              "apiVersion": "2018-02-14",
+              "properties": {
+                "contentType": "text/secret",
+                "value": "[concat('Server=tcp:', variables('sql_server_name'),'.database.windows.net',',1433;Initial Catalog=',variables('sql_database_name'),';User ID=',variables('sqldatabase_client_login'),';Password=',variables('sqldatabase_client_password'),';Encrypt=True;TrustServerCertificate=False;Connection Timeout=7200;')]"
+              }
+            }
+            //{
+            //  "type": "Microsoft.KeyVault/vaults/secrets",
+            //  "name": "[concat(parameters('KeyVault-Name'),'/', 'sql-msi-connectionstring')]",
+            //  "apiVersion": "2018-02-14",
+            //  "properties": {
+            //    "contentType": "text/secret",
+            //    "value": "[concat('Data Source=', variables('sql_server_name'),'.database.windows.net',';Initial Catalog=',variables('sql_database_name'))]"
+            //  }
+            //}
+            //{
+            //  "name": "[concat(parameters('keyvault-name'), '/add')]",
+            //  "type": "Microsoft.KeyVault/vaults/accessPolicies",
+            //  "apiVersion": "2018-02-14",
+            //  "properties": {
+            //    "accessPolicies": [
+            //      {
+            //        "tenantId": "[subscription().tenantId]",
+            //        "objectId": "[reference(concat(resourceId('Microsoft.DataFactory/factories', variables('datafactory_name')), '/providers/Microsoft.ManagedIdentity/Identities/default'), '2015-08-31-PREVIEW').principalId]",
+            //        "permissions": {
+            //          "keys": [
+            //            "Get",
+            //            "List"
+            //          ],
+            //          "secrets": [
+            //            "Get",
+            //            "List"
+            //          ],
+            //          "certificates": [
+            //            "Get",
+            //            "List"
+            //          ]
+            //        }
+            //      }
+            //    ]
+            //  }
+            //}
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sql_server_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2015-05-01-preview",
+      "name": "[variables('sql_server_name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": "v12.0",
+      "properties": {
+        "administratorLogin": "[variables('sqldatabase_admin_login')]",
+        "administratorLoginPassword": "[variables('sqldatabase_admin_password')]",
+        "version": "12.0"
+      },
+      "resources": [
+        {
+          "type": "firewallRules",
+          "apiVersion": "2015-05-01-preview",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('sql_server_name'))]"
+          ]
+        }
+      ],
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('sql_audit_storage_name'))]"
+      ]
+    },
+    //{
+    //  "type": "Microsoft.Sql/servers/administrators",
+    //  "name": "[concat(variables('sql_server_name'), '/activeDirectory')]",
+    //  "apiVersion": "2014-04-01",
+    //  "location": "[parameters('sql-location')]",
+    //  "properties": {
+    //    "administratorType": "ActiveDirectory",
+    //    "login": "[parameters('SQLServADLogin')]",
+    //    "sid": "[parameters('SQLServADSID')]",
+    //    "tenantId": "[subscription().tenantid]"
+    //  },
+    //  "dependsOn": [
+    //    "[resourceId('Microsoft.Sql/servers', variables('sql_server_name'))]"
+    //  ]
+    //},
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-04-01",
+      "name": "[variables('sql_audit_storage_name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      },
+      "resources": [
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "2019-04-01",
+          "name": "/default/sqldbauditlogs",
+          "dependsOn": [
+            "[variables('sql_audit_storage_name')]"
+          ],
+          "properties": {
+            "publicAccess": "None"
+          }
+        },
+        {
+          "type": "blobServices/containers",
+          "apiVersion": "2019-04-01",
+          "name": "/default/vulnerability-assessment",
+          "dependsOn": [
+            "[variables('sql_audit_storage_name')]"
+          ],
+          "properties": {
+            "publicAccess": "None"
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2017-03-01-preview",
+      "name": "[concat(variables('sql_server_name'), '/', variables('sql_database_name'))]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "sku": {
+        "name": "[parameters('sql-skuName')]"
+      },
+      "kind": "v12.0,user",
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "maxSizeBytes": "[parameters('dbMaxSizeBytes')]",
+        "catalogCollation": "SQL_Latin1_General_CP1_CI_AS",
+        "licenseType": "BasePrice",
+        "zoneRedundant": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sql_server_name'))]"
+      ]
+    },
+    {
+      "name": "nestedTemplateProduction",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2017-05-10",
+      "resourceGroup": "[resourceGroup().name]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "variables": {},
+          "resources": [
+            {
+              "type": "Microsoft.Sql/servers/securityAlertPolicies",
+              "apiVersion": "2017-03-01-preview",
+              "name": "[concat(variables('sql_server_name'), '/Default')]",
+              "dependsOn": [
+              ],
+              "properties": {
+                "state": "Enabled",
+                "disabledAlerts": [
+                  ""
+                ],
+                "emailAddresses": [
+                  ""
+                ],
+                "emailAccountAdmins": true,
+                "retentionDays": 0
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/auditingSettings",
+              "apiVersion": "2017-03-01-preview",
+              "name": "[concat(variables('sql_server_name'), '/Default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/securityAlertPolicies', variables('sql_server_name'), 'Default')]"
+              ],
+              "properties": {
+                "state": "Enabled",
+                "storageEndpoint": "[concat('https://',variables('sql_audit_storage_name'),'.blob.core.windows.net/')]",
+                "storageAccountAccessKey": "[listKeys(concat(resourceGroup().id,'/providers/Microsoft.Storage/storageAccounts/', variables('sql_audit_storage_name')),'2015-05-01-preview').key1]",
+                "retentionDays": 60,
+                "auditActionsAndGroups": [
+                  "SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP",
+                  "FAILED_DATABASE_AUTHENTICATION_GROUP",
+                  "BATCH_COMPLETED_GROUP"
+                ],
+                "storageAccountSubscriptionId": "[subscription().subscriptionId]",
+                "isStorageSecondaryKeyInUse": false,
+                "isAzureMonitorTargetEnabled": false
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/extendedAuditingSettings",
+              "apiVersion": "2017-03-01-preview",
+              "name": "[concat(variables('sql_server_name'), '/Default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/securityAlertPolicies', variables('sql_server_name'), 'Default')]",
+                "[resourceId('Microsoft.Sql/servers/auditingSettings', variables('sql_server_name'), 'Default')]"
+              ],
+              "properties": {
+                "state": "Enabled",
+                "storageEndpoint": "[concat('https://',variables('sql_audit_storage_name'),'.blob.core.windows.net/')]",
+                "storageAccountAccessKey": "[listKeys(concat(resourceGroup().id,'/providers/Microsoft.Storage/storageAccounts/', variables('sql_audit_storage_name')),'2015-05-01-preview').key1]",
+                "retentionDays": 60,
+                "auditActionsAndGroups": [
+                  "SUCCESSFUL_DATABASE_AUTHENTICATION_GROUP",
+                  "FAILED_DATABASE_AUTHENTICATION_GROUP",
+                  "BATCH_COMPLETED_GROUP"
+                ],
+                "storageAccountSubscriptionId": "[subscription().subscriptionId]",
+                "isStorageSecondaryKeyInUse": false,
+                "isAzureMonitorTargetEnabled": false
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/vulnerabilityAssessments",
+              "apiVersion": "2018-06-01-preview",
+              "name": "[concat(variables('sql_server_name'), '/Default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/auditingSettings', variables('sql_server_name'), 'Default')]",
+                "[concat('Microsoft.Sql/servers/',variables('sql_server_name'), '/securityAlertPolicies/Default')]"
+              ],
+              "properties": {
+                "storageContainerPath": "[concat('https://',variables('sql_audit_storage_name'),'.blob.core.windows.net/vulnerability-assessment/')]",
+                "storageAccountAccessKey": "[listKeys(concat(resourceGroup().id,'/providers/Microsoft.Storage/storageAccounts/', variables('sql_audit_storage_name')),'2015-05-01-preview').key1]",
+                "recurringScans": {
+                  "isEnabled": true,
+                  "emailSubscriptionAdmins": true,
+                  "emails": []
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sql_server_name'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('sql_audit_storage_name'))]"
+      ]
+    }
+  ],
+  "outputs": {
+  }
+}

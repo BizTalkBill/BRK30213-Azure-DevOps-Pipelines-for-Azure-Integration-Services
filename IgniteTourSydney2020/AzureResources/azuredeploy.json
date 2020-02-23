@@ -1,0 +1,405 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "BaseName": {
+      "defaultValue": "thetour",
+      "type": "string"
+    },
+    "EnvironmentPrefix": {
+      "defaultValue": "DEV",
+      "type": "string",
+      "allowedValues": [
+        "DEV",
+        "TST",
+        "PRD"
+      ]
+    },
+    "EnvironmentName": {
+      "defaultValue": "Development",
+      "type": "string"
+    },
+    "EnvironmentType": {
+      "defaultValue": "Non-Production",
+      "type": "string",
+      "allowedValues": [
+        "Production",
+        "Pre-Production",
+        "Non-Production"
+      ]
+    },
+    "EnvironmentTag": {
+      "defaultValue": "Development",
+      "type": "string"
+    },
+    "ApplicationTag": {
+      "defaultValue": "thetour",
+      "type": "string"
+    },
+    "KeyVaultSecurityGroupId": {
+      "defaultValue": "bda1cfa0-90dd-4a4f-aaa2-951414a04127",
+      "type": "string"
+    },
+    "KeyVaultServiceConnectionId": {
+      "defaultValue": "e7702ff3-4f64-4b39-9b22-40577790e202",
+      "type": "string"
+    },
+    "KeyVaultSKUFamily": {
+      "defaultValue": "A",
+      "type": "string",
+      "allowedValues": [
+        "A"
+      ]
+    },
+    "KeyVaultSKUName": {
+      "defaultValue": "Standard",
+      "type": "string",
+      "allowedValues": [
+        "Standard",
+        "Premium"
+      ]
+    },
+    "APIManagementSKUName": {
+      "defaultValue": "Developer",
+      "type": "string",
+      "allowedValues": [
+        "Developer",
+        "Standard",
+        "Premium",
+        "Basic",
+        "Consumption"
+      ]
+    },
+    "APIManagementSKUCapacity": {
+      "defaultValue": 1,
+      "type": "int"
+    },
+    "APIManagementPublisherEmail": {
+      "defaultValue": "bill@biztalkbill.com",
+      "type": "string"
+    },
+    "APIManagementPublisherName": {
+      "defaultValue": "Ignite the Tour Sydney 2020",
+      "type": "string"
+    }
+  },
+  "variables": {
+    //"apim_name": "[concat(toLower(parameters('EnvironmentPrefix')),'-',toLower(parameters('BaseName')),'-',toLower(parameters('EnvironmentPrefix')),'-apisvc')]",
+    //"keyvault_name": "[concat(toLower(parameters('EnvironmentPrefix')),'-',toLower(parameters('BaseName')),'-kv01')]",
+    //"insights_name": "[concat(toLower(parameters('EnvironmentPrefix')),'-',toLower(parameters('BaseName')),'-','-insights')]",
+    //"log_analytics_name": "[concat(toLower(parameters('EnvironmentPrefix')),'-',toLower(parameters('BaseName')),'-log01')]",
+    "apim_name": "[concat(toLower(parameters('BaseName')),'-','apisvc','-',toLower(parameters('EnvironmentPrefix')))]",
+    "keyvault_name": "[concat(toLower(parameters('BaseName')),'-','kv01','-',toLower(parameters('EnvironmentPrefix')))]",
+    "insights_name": "[concat(toLower(parameters('BaseName')),'-','insights','-',toLower(parameters('EnvironmentPrefix')))]",
+    "log_analytics_name": "[concat(toLower(parameters('BaseName')),'-','log01','-',toLower(parameters('EnvironmentPrefix')))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2018-02-14",
+      "name": "[variables('keyvault_name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "properties": {
+        "sku": {
+          "family": "[parameters('KeyVaultSKUFamily')]",
+          "name": "[parameters('KeyVaultSKUName')]"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[parameters('KeyVaultSecurityGroupId')]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "secrets": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "certificates": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "ManageContacts",
+                "ManageIssuers",
+                "GetIssuers",
+                "ListIssuers",
+                "SetIssuers",
+                "DeleteIssuers"
+              ]
+            }
+          },
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[parameters('KeyVaultServiceConnectionId')]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "secrets": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "certificates": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore",
+                "ManageContacts",
+                "ManageIssuers",
+                "GetIssuers",
+                "ListIssuers",
+                "SetIssuers",
+                "DeleteIssuers"
+              ]
+            }
+          }
+        ],
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": true
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','keyvault-name')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[variables('keyvault_name')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','APPINSIGHTS-INSTRUMENTATIONKEY')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[reference(concat('microsoft.insights/components/', variables('insights_name'))).InstrumentationKey]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.Insights/components', variables('insights_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','insights-name')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[variables('insights_name')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.Insights/components', variables('insights_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','log-analytics-name')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[variables('log_analytics_name')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.Operationalinsights/workspaces', variables('log_analytics_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','log-analytics-resourcegroup')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[resourceGroup().name]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.Operationalinsights/workspaces', variables('log_analytics_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','apimanagement-name')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[variables('apim_name')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.ApiManagement/service', variables('apim_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyvault_name'),'/','apimanagement-ip')]",
+      "apiVersion": "2018-02-14",
+      "properties": {
+        "contentType": "text/plain",
+        "value": "[reference(variables('apim_name')).publicIPAddresses[0]]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]",
+        "[resourceId('Microsoft.ApiManagement/service', variables('apim_name'))]"
+      ]
+    },
+    {
+      "name": "[variables('insights_name')]",
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2015-05-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "kind": "string",
+      "properties": {
+        "Application_Type": "other"
+      }
+    },
+    {
+      "type": "Microsoft.Operationalinsights/workspaces",
+      "apiVersion": "2015-11-01-preview",
+      "name": "[variables('log_analytics_name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[parameters('ApplicationTag')]"
+      },
+      "properties": {
+        "source": "Azure",
+        "sku": {
+          "name": "free"
+        },
+        "retentionInDays": 7
+      }
+    },
+    {
+      "type": "Microsoft.ApiManagement/service",
+      "apiVersion": "2019-01-01",
+      "name": "[variables('apim_name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "Environment": "[parameters('EnvironmentTag')]",
+        "Application": "[concat(parameters('ApplicationTag'),'-APIM')]"
+      },
+      "sku": {
+        "name": "[parameters('APIManagementSKUName')]",
+        "capacity": "[parameters('APIManagementSKUCapacity')]"
+      },
+      "properties": {
+        "publisherEmail": "[parameters('APIManagementPublisherEmail')]",
+        "publisherName": "[parameters('APIManagementPublisherName')]",
+        "notificationSenderEmail": "[parameters('APIManagementPublisherEmail')]",
+        "hostnameConfigurations": [
+          {
+            "type": "Proxy",
+            "hostName": "[concat(variables('apim_name'), '.azure-api.net')]",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": true
+          }
+        ],
+        "customProperties": {
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Ciphers.TripleDes168": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "True",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Protocols.Server.Http2": "False"
+        },
+        "virtualNetworkType": "None"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyvault_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/loggers",
+      "apiVersion": "2019-01-01",
+      "name": "[concat(variables('apim_name'), '/', variables('insights_name'))]",
+      "properties": {
+        "loggerType": "applicationInsights",
+        "credentials": {
+          "instrumentationKey": "[reference(concat('microsoft.insights/components/', variables('insights_name'))).InstrumentationKey]"
+        },
+        "isBuffered": true,
+        "resourceId": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/microsoft.insights/components/',variables('apim_name'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', variables('apim_name'))]",
+        "[resourceId('Microsoft.Insights/components', variables('insights_name'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service/diagnostics",
+      "apiVersion": "2019-01-01",
+      "name": "[concat(variables('apim_name'), '/applicationinsights')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ApiManagement/service', variables('apim_name'))]",
+        "[resourceId('Microsoft.ApiManagement/service/loggers', variables('apim_name'),variables('insights_name'))]",
+        "[resourceId('Microsoft.ApiManagement/service/loggers', variables('apim_name'), variables('insights_name'))]"
+      ],
+      "properties": {
+        "alwaysLog": "allErrors",
+        "enableHttpCorrelationHeaders": true,
+        "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', variables('apim_name'), variables('insights_name'))]",
+        "sampling": {
+          "samplingType": "fixed",
+          "percentage": 100
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}
